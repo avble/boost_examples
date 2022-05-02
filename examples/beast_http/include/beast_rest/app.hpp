@@ -2,14 +2,7 @@
 
 #include "session.hpp"
 
-template<typename request_wrap>
-void request_handle_01(request_wrap &&rq){
-
-    rq.res_.body() = "The resource is reponsed.";
-    rq.res_.prepare_payload();
-}
-
-
+namespace beast_rest{
 //------------------------------------------------------------------------------
 
 // Accepts incoming connections and launches the sessions
@@ -98,3 +91,6 @@ private:
         do_accept();
     }
 };
+
+using rest_app = listener;
+}

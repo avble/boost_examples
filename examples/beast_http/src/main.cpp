@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     net::io_context ioc;
 
     // Create and launch a listening port
-    std::make_shared<listener>(
+    std::make_shared<beast_rest::rest_app>(
         ioc,
         tcp::endpoint{address, port})->run();
 

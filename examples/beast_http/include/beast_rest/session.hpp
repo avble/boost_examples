@@ -2,12 +2,13 @@
 
 #include "config.hpp"
 
-
-template<class send_func>
-class request_wrap{
+namespace beast_rest{
+class request{
 
     public:
-        request_wrap(http::request<http::string_body>&& req, send_func send):
+        // request(http::request<http::string_body>&& req, send_res_func send):
+        request(http::request<http::string_body>&& req, 
+                    std::function<void(http::response<http::string_body> &&)> send):
         send_(send),
         req_(std::move(req)),
         res_(http::status::ok,  req_.version())
@@ -15,16 +16,26 @@ class request_wrap{
             res_.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         }
 
-        ~request_wrap(){
+        /**
+         * send the response on the destructor
+         */
+        ~request(){
             send_(std::move(res_));
         }
 
     public:
-        send_func send_;
+        std::function<void(http::response<http::string_body>&& )> send_;
         http::request<http::string_body> req_;
         http::response<http::string_body> res_;
 
 };
+
+void request_handle_01(request &&rq){
+
+    rq.res_.body() = "The resource is reponsed.";
+    rq.res_.prepare_payload();
+}
+
 
 template<
     class Send>
@@ -35,7 +46,7 @@ handle_request(
 {
 
     // select appropriate the rest service
-    request_wrap<Send> m_req(std::move(req), send);
+    request m_req(std::move(req), send);
 
     request_handle_01(std::move(m_req));
 
@@ -53,12 +64,12 @@ class session : public std::enable_shared_from_this<session>
 {
     // This is the C++11 equivalent of a generic lambda.
     // The function object is used to send an HTTP message.
-    struct send_lambda
+    struct send_res_lambda
     {
         session& self_;
 
         explicit
-        send_lambda(session& self)
+        send_res_lambda(session& self)
             : self_(self)
         {
         }
@@ -72,10 +83,6 @@ class session : public std::enable_shared_from_this<session>
             // we use a shared_ptr to manage it.
             auto sp = std::make_shared<
                 http::response<Body>>(std::move(msg));
-
-            // Store a type-erased version of the shared
-            // pointer in the class to keep it alive.
-            self_.res_ = sp;
 
             // Write the response
             http::async_write(
@@ -91,15 +98,16 @@ class session : public std::enable_shared_from_this<session>
     beast::tcp_stream stream_;
     beast::flat_buffer buffer_;
     http::request<http::string_body> req_;
-    std::shared_ptr<void> res_;
-    send_lambda lambda_;
+    send_res_lambda send_res_;
+
+    std::map<std::string, std::function<void(request &&)>> table_services;
 
 public:
     // Take ownership of the stream
     session(
         tcp::socket&& socket)
         : stream_(std::move(socket))
-        , lambda_(*this)
+        , send_res_(*this)
     {
     }
 
@@ -144,8 +152,9 @@ public:
         if(ec)
             return fail(ec, "read");
 
+        // dispatch to the corresponding service
         // handle request
-        handle_request(std::move(req_), lambda_);
+        handle_request(std::move(req_), send_res_);
 
         // TODO: continue reading
         do_read();
@@ -169,8 +178,6 @@ public:
             return do_close();
         }
 
-        // We're done with the response so delete it
-        res_ = nullptr;
     }
 
     void
@@ -183,3 +190,5 @@ public:
         // At this point the connection is closed gracefully
     }
 };
+
+}
