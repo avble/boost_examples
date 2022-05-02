@@ -2,6 +2,7 @@
 
 #include "config.hpp"
 
+
 template<class send_func>
 class request_wrap{
 

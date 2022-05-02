@@ -1,6 +1,5 @@
 
-#include "../include/beast_rest/app.hpp"
-
+#include <beast_rest/app.hpp>
 
 //------------------------------------------------------------------------------
 
@@ -14,6 +13,7 @@ int main(int argc, char* argv[])
             "    http-server-async 0.0.0.0 8080 . 1\n";
         return EXIT_FAILURE;
     }
+
     auto const address = net::ip::make_address(argv[1]);
     auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
 
@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
         tcp::endpoint{address, port})->run();
 
     ioc.run();
+
 
     return EXIT_SUCCESS;
 }
