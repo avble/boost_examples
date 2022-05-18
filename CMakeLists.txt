@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 # set the project name
-project(CpplangByEx)
+project(CpplangByEx CXX)
 
 ## Boost library 
 # set(Boost_DEBUG 1)
@@ -32,6 +32,4 @@ add_subdirectory(examples/boost_asio/http)
 # 
 add_subdirectory(examples/beast_http)
 
-# add_subdirectory(examples/sample_with_catch2)
-# add_executable(catch2_test ./examples/sample_with_catch2/test.cpp)
-# target_link_libraries(catch2_test Catch2::Catch2)
+add_subdirectory(examples/sample_with_catch2)

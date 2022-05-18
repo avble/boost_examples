@@ -1,7 +1,7 @@
 [submodule "git-sub/boost"]
 	path = git-sub/boost
 	url = https://github.com/boostorg/boost.git
-	branch = master 
+	branch = boost-v1.73.0 
 	
 [submodule "git-sub/catch2"]
 	path = git-sub/catch2

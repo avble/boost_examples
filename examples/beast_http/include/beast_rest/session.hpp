@@ -1,11 +1,26 @@
 #pragma once
-
 #include "config.hpp"
 
 namespace beast_rest{
+class listener;
+
 class request{
 
     public:
+
+        request():
+        req_(http::verb::get, "index", 10),
+        send_(nullptr),
+        res_(http::status::ok,  req_.version()){
+
+        }
+
+        request(http::request<http::string_body>&& req):
+        send_(nullptr),
+        res_(http::status::ok,  req_.version()){
+
+        }
+
         // request(http::request<http::string_body>&& req, send_res_func send):
         request(http::request<http::string_body>&& req, 
                     std::function<void(http::response<http::string_body> &&)> send):
@@ -20,7 +35,13 @@ class request{
          * send the response on the destructor
          */
         ~request(){
-            send_(std::move(res_));
+            std::cout << "[" << this << "]" << "~request 01" << std::endl;
+            if (send_ != nullptr){
+                std::cout << "~request 01.01" << std::endl;
+                send_(std::move(res_));
+                send_ = nullptr;
+            }
+            std::cout << "[" << this << "]" << "~request 02" << std::endl;
         }
 
     public:
@@ -30,31 +51,26 @@ class request{
 
 };
 
-void request_handle_01(request &&rq){
+// template<
+//     class Send>
+// void
+// handle_request(
+//     http::request<http::string_body>&& req,
+//     Send&& send)
+// {
 
-    rq.res_.body() = "The resource is reponsed.";
-    rq.res_.prepare_payload();
-}
+//     // select appropriate the rest service
+//     request m_req(std::move(req), send);
+//    // std::cout << "test 01" << std::endl;
 
+//     request_handle_01(std::move(m_req));
+//    // std::cout << "test 02" << std::endl;
 
-template<
-    class Send>
-void
-handle_request(
-    http::request<http::string_body>&& req,
-    Send&& send)
-{
-
-    // select appropriate the rest service
-    request m_req(std::move(req), send);
-
-    request_handle_01(std::move(m_req));
-
-}
+// }
 
 //------------------------------------------------------------------------------
 // Report a failure
-void
+static void
 fail(beast::error_code ec, char const* what)
 {
     std::cerr << what << ": " << ec.message() << "\n";
@@ -84,6 +100,9 @@ class session : public std::enable_shared_from_this<session>
             auto sp = std::make_shared<
                 http::response<Body>>(std::move(msg));
 
+            self_.res_ = sp;
+
+           // std::cout << "http-response: ENTER" << std::endl;
             // Write the response
             http::async_write(
                 self_.stream_,
@@ -92,6 +111,8 @@ class session : public std::enable_shared_from_this<session>
                     &session::on_write,
                     self_.shared_from_this(),
                     sp->need_eof()));
+
+           // std::cout << "http_response: LEAVE" << std::endl;
         }
     };
 
@@ -99,15 +120,18 @@ class session : public std::enable_shared_from_this<session>
     beast::flat_buffer buffer_;
     http::request<http::string_body> req_;
     send_res_lambda send_res_;
-
-    std::map<std::string, std::function<void(request &&)>> table_services;
+    std::shared_ptr<void> res_;
+    std::shared_ptr<listener> listener_;
 
 public:
     // Take ownership of the stream
     session(
-        tcp::socket&& socket)
+        tcp::socket&& socket,
+        std::shared_ptr<listener> listen
+        )
         : stream_(std::move(socket))
         , send_res_(*this)
+        , listener_(listen)
     {
     }
 
@@ -141,24 +165,27 @@ public:
     void
     on_read(
         beast::error_code ec,
-        std::size_t bytes_transferred)
-    {
-        boost::ignore_unused(bytes_transferred);
+        std::size_t bytes_transferred);
+    // {
+    //     boost::ignore_unused(bytes_transferred);
 
-        // This means they closed the connection
-        if(ec == http::error::end_of_stream)
-            return do_close();
+    //     // This means they closed the connection
+    //     if(ec == http::error::end_of_stream)
+    //         return do_close();
 
-        if(ec)
-            return fail(ec, "read");
+    //     if(ec)
+    //         return fail(ec, "read");
 
-        // dispatch to the corresponding service
-        // handle request
-        handle_request(std::move(req_), send_res_);
+    //     // dispatch to the corresponding service
+    //     // handle request
+    //     // handle_request(std::move(req_), send_res_);
+    //     auto r = listener_.get();
 
-        // TODO: continue reading
-        do_read();
-    }
+    //     // r.handle_request(std::move(req_));
+
+    //     // TODO: continue reading
+    //     do_read();
+    // }
 
     void
     on_write(
@@ -168,6 +195,7 @@ public:
     {
         boost::ignore_unused(bytes_transferred);
 
+       // std::cout << "on_write: ENTER" << std::endl;
         if(ec)
             return fail(ec, "write");
 
@@ -175,8 +203,13 @@ public:
         {
             // This means we should close the connection, usually because
             // the response indicated the "Connection: close" semantic.
+           // std::cout << "on_write: do_close" << std::endl;
             return do_close();
         }
+        
+        res_ = nullptr;
+
+       // std::cout << "on_write: LEAVE" << std::endl;
 
     }
 
@@ -184,9 +217,11 @@ public:
     do_close()
     {
         // Send a TCP shutdown
+       // std::cout << "do_close: ENTER" << std::endl;
         beast::error_code ec;
         stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 
+       // std::cout << "do_close: LEAVE" << std::endl;
         // At this point the connection is closed gracefully
     }
 };

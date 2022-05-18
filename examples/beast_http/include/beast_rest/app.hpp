@@ -1,6 +1,8 @@
 #pragma once
-
+#include <iostream>
+#include "config.hpp"
 #include "session.hpp"
+#include "route.hpp"
 
 namespace beast_rest{
 //------------------------------------------------------------------------------
@@ -8,16 +10,19 @@ namespace beast_rest{
 // Accepts incoming connections and launches the sessions
 class listener : public std::enable_shared_from_this<listener>
 {
+private:
     net::io_context& ioc_;
     tcp::acceptor acceptor_;
+    beast_rest::route &route_;
 
 public:
     listener(
         net::io_context& ioc,
-        tcp::endpoint endpoint)
+        tcp::endpoint endpoint,
+        beast_rest::route& r)
         : ioc_(ioc)
-        , acceptor_(net::make_strand(ioc))
-    {
+        , acceptor_(ioc)
+        , route_(r){
         beast::error_code ec;
 
         // Open the acceptor
@@ -61,16 +66,24 @@ public:
         do_accept();
     }
 
+    route const & get_route(){
+        return this->route_;
+    }
+
 private:
     void
     do_accept()
     {
         // The new connection gets its own strand
+        // std::cout << "do_accept: ENTER" << std::endl;
+
         acceptor_.async_accept(
-            net::make_strand(ioc_),
+            ioc_,
             beast::bind_front_handler(
                 &listener::on_accept,
                 shared_from_this()));
+
+        // std::cout << "do_accept: LEAVE" << std::endl;
     }
 
     void
@@ -84,7 +97,8 @@ private:
         {
             // Create the session and run it
             std::make_shared<session>(
-                std::move(socket))->run();
+                std::move(socket), shared_from_this())->run();
+
         }
 
         // Accept another connection
