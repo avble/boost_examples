@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 
 # set the project name
 project(CpplangByEx CXX)
@@ -22,14 +22,6 @@ set(CATCH_BUILD_STATIC_LIBRARY ON)
 add_subdirectory(git-sub/catch2)
 
 # add the executable
-# asio example
-add_executable(async_timer ./examples/boost_asio/async_timer.cpp)
-
-target_link_libraries(async_timer PUBLIC Threads::Threads)
-
-add_subdirectory(examples/boost_asio/http)
-
-# 
 add_subdirectory(examples/beast_http)
 
-add_subdirectory(examples/sample_with_catch2)
+add_subdirectory(examples/beast_ws_client)
