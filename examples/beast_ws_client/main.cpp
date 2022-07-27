@@ -1,6 +1,8 @@
 #include <thread>
 
 #include <variant>
+#include <string_view>
+
 #include "config.hpp"
 #include "ws_client.hpp"
 
@@ -32,7 +34,11 @@ main(int argc, char** argv)
     else
         ws_client = std::shared_ptr<session_concept>(new session_ssl(ioc));
     
-    ws_client->run(host, port, target);
+    ws_client->run(host, port, target,
+                    [](boost::system::error_code ec, std::string_view read_data){
+                        std::cout << "on_read data: \n" << std::string(read_data.data(), read_data.size()) << std::endl;
+                    }
+    );
 
     // Run the I/O service. The call will return when
     auto thread_io = [&ioc](){

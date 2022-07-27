@@ -4,6 +4,11 @@
 #include "boost/beast/websocket/ssl.hpp"
 #include "boost/beast/ssl.hpp"
 
+#include <string_view>
+
+// Type definition
+typedef std::function<void(beast::error_code, std::string_view)> on_read_t;
+
 template <typename ws_client>
 class ws_client_writer: public std::enable_shared_from_this<ws_client_writer<ws_client>>{
 
@@ -120,7 +125,8 @@ class session_concept{
     run(
         char const* host,
         char const* port,
-        char const* target) = 0;
+        char const* target,
+        on_read_t on_read_cb = nullptr) = 0;
 
     virtual void
     send_frame(std::string) = 0;
@@ -140,8 +146,10 @@ class session_client: public session_concept
     tcp::resolver resolver_;
 
     std::shared_ptr<writer_t> writer_;
-
     beast::flat_buffer read_buffer_;
+
+    //
+    on_read_t on_read_cb_;
 
     public:
     explicit
@@ -150,6 +158,7 @@ class session_client: public session_concept
         
         writer_ = std::make_shared<writer_t>(*this);
         target_ = "";
+        on_read_cb_ = nullptr;
     }
 
     Derived &
@@ -162,10 +171,14 @@ class session_client: public session_concept
     run(
         char const* host,
         char const* port,
-        char const* target)
+        char const* target,
+        on_read_t on_read_cb = nullptr
+        )
     {
         host_ = host;
         target_ = target;
+        if (on_read_cb != nullptr)
+            on_read_cb_ = on_read_cb;
 
         auto self = get_impl().shared_from_this();
 
@@ -277,7 +290,10 @@ class session_client: public session_concept
             return;
         }
 
-        std::cout << beast::make_printable(read_buffer_.data()) << std::endl;
+        // std::cout << beast::make_printable(read_buffer_.data()) << std::endl;
+
+        if (on_read_cb_ != nullptr)
+            on_read_cb_(ec, std::string_view(static_cast<char *>(read_buffer_.data().data()), read_buffer_.data().size()));
 
         read_buffer_.consume(bytes_transferred);
         do_read();

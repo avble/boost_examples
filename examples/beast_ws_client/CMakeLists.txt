@@ -16,7 +16,6 @@ add_definitions(-DBOOST_BEAST_USE_STD_STRING_VIEW)
 
 # add the executable
 add_executable(ws_client
-                ws_client.cpp
                 main.cpp
             )
 
