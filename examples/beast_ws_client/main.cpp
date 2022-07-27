@@ -1,5 +1,6 @@
 #include <thread>
 
+#include <variant>
 #include "config.hpp"
 #include "ws_client.hpp"
 
@@ -7,7 +8,7 @@ int
 main(int argc, char** argv)
 {
     // Check command line arguments.
-    if(argc != 3)
+    if(argc < 3)
     {
         std::cerr <<
             "Usage: ws_client <host> <port>\n" <<
@@ -17,18 +18,23 @@ main(int argc, char** argv)
     }
     auto const host = argv[1];
     auto const port = argv[2];
+    auto target = "";
+    if (argc == 4)
+        target = argv[3];
 
     // The io_context is required for all I/O
     net::io_context ioc;
 
-    // Launch the asynchronous operation
-    auto ws_client = std::make_shared<session_client>(ioc);
-    ws_client->prepare();
+    std::shared_ptr<session_concept> ws_client;
+
+    if (port != "443") 
+        ws_client = std::shared_ptr<session_concept>(new session_plain(ioc));
+    else
+        ws_client = std::shared_ptr<session_concept>(new session_ssl(ioc));
     
-    ws_client->run(host, port);
+    ws_client->run(host, port, target);
 
     // Run the I/O service. The call will return when
-    // the socket is closed.
     auto thread_io = [&ioc](){
         ioc.run();
     };

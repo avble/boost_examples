@@ -21,6 +21,15 @@ ENDIF(Boost_FOUND)
 set(CATCH_BUILD_STATIC_LIBRARY ON)
 add_subdirectory(git-sub/catch2)
 
+# openssl configure
+set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/install)
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL REQUIRED )
+
+IF (OPENSSL_FOUND)
+INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+ENDIF(OPENSSL_FOUND)
+
 # add the executable
 add_subdirectory(examples/beast_http)
 

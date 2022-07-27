@@ -6,6 +6,9 @@ project(WsClient CXX)
 find_package(Threads REQUIRED)
 find_package(Boost 1.73.0 REQUIRED COMPONENTS filesystem system)
 
+# find_package(OpenSSL 3.0.5 REQUIRED COMPONENTS Crypto)
+
+
 set(CMAKE_CXX_STANDARD 17)
 
 # Setting for boost
@@ -24,7 +27,10 @@ target_include_directories(ws_client PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(ws_client Threads::Threads Boost::filesystem Boost::system)
+target_link_libraries(ws_client
+                    Threads::Threads
+                    Boost::filesystem Boost::system
+                    OpenSSL::SSL OpenSSL::Crypto)
 
 # Test 
 # add_subdirectory(test)

@@ -2,9 +2,12 @@
 It includes various examples based on boost.beast and boost.asio.
 
 # websocket client
+## Feature
++ Support plain and SSL connection
+
 --- command ---
 ```bash
-./ws_client 127.0.0.1 8080 
+./ws_client 127.0.0.1 8080 /echo 
 
 ```
 --- console ---

@@ -8,3 +8,6 @@
 	url = https://github.com/catchorg/Catch2.git
 	branch = v2.x 
 
+[submodule "git-sub/openssl"]
+	path = git-sub/openssl
+	url = git@github.com:openssl/openssl.git
